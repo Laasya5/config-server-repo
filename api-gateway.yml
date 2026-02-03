@@ -5,9 +5,6 @@ spring:
   application:
     name: api-gateway
 
-  #config:
-    #import: optional:configserver:http://localhost:8888
-
   cloud:
     gateway:
       discovery:
@@ -16,29 +13,29 @@ spring:
           lower-case-service-id: true
 
       routes:
-        # ---------------- Patient Route ----------------
+        # ---- Patient: avoid regex for now, use simple filters
         - id: patient-service
           uri: lb://patient-service
           predicates:
             - Path=/patient-service/**
           filters:
-            - RewritePath=/patient-service/(?<seg>.*),/api/v1/patients/${seg}
+            - StripPrefix=1
+            - PrefixPath=/api/v1/patients
 
-        # ---------------- Remainder Route ----------------
-        - id: remainder-service
-          uri: lb://remainder-service
+        # ---- TEMP: test route to verify predicate matching (remove later)
+        - id: echo-test
+          uri: http://httpbin.org    # external public echo service
           predicates:
-            - Path=/remainder-service/**
+            - Path=/echo/**
           filters:
-            - RewritePath=/remainder-service/(?<seg>.*),/api/v1/remainders/${seg}
+            - StripPrefix=1
 
-        # ---------------- Appointment Route ----------------
-        - id: appointment-service
-          uri: lb://appointment-service
-          predicates:
-            - Path=/appointment-service/**
-          filters:
-            - RewritePath=/appointment-service/(?<seg>.*),/api/v1/appointments/${seg}
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+    register-with-eureka: true
+    fetch-registry: true
 
 logging:
   level:
@@ -48,18 +45,11 @@ logging:
     org.springframework.cloud.gateway.filter: DEBUG
     reactor.netty.http.server: DEBUG
 
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka
-    register-with-eureka: true
-    fetch-registry: true
-
 management:
   endpoints:
     web:
       exposure:
-        include: gateway
+        include: gateway,health,loggers
   endpoint:
     gateway:
       enabled: true
