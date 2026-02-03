@@ -1,0 +1,65 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  config:
+    import: optional:configserver:http://localhost:8888
+
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: false
+          lower-case-service-id: true
+
+      routes:
+        # ---------------- Patient Route ----------------
+        - id: patient-service
+          uri: lb://patient-service
+          predicates:
+            - Path=/patient-service/**
+          filters:
+            - RewritePath=/patient-service/(?<seg>.*),/api/v1/patients/${seg}
+
+        # ---------------- Remainder Route ----------------
+        - id: remainder-service
+          uri: lb://remainder-service
+          predicates:
+            - Path=/remainder-service/**
+          filters:
+            - RewritePath=/remainder-service/(?<seg>.*),/api/v1/remainders/${seg}
+
+        # ---------------- Appointment Route ----------------
+        - id: appointment-service
+          uri: lb://appointment-service
+          predicates:
+            - Path=/appointment-service/**
+          filters:
+            - RewritePath=/appointment-service/(?<seg>.*),/api/v1/appointments/${seg}
+
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.cloud.gateway.handler.RoutePredicateHandlerMapping: DEBUG
+    org.springframework.cloud.gateway.route.RouteDefinitionLocator: DEBUG
+    org.springframework.cloud.gateway.filter: DEBUG
+    reactor.netty.http.server: DEBUG
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+    register-with-eureka: true
+    fetch-registry: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: gateway
+  endpoint:
+    gateway:
+      enabled: true
